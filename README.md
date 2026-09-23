@@ -65,8 +65,9 @@ curl -X PUT http://127.0.0.1:3000/products/1 \
 | GET | `/products/{id}` | 404 if missing |
 | POST | `/products/add` | 201. All writable fields required |
 | PUT | `/products/{id}` | Merge. Send only the fields that change. `{}` is 400 |
+| DELETE | `/products/{id}` | 204. 404 if missing |
 
-Product JSON is `{ id, title, description, category, price, tags }`. `category` is one of the 24 DummyJSON slugs. `tags` may be empty. There is no auth and no delete.
+Product JSON is `{ id, title, description, category, price, tags }`. `category` is one of the 24 DummyJSON slugs. `tags` may be empty. There is no auth.
 
 ## Key architectural decisions
 

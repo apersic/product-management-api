@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   NotFoundException,
@@ -47,7 +48,10 @@ export class ProductsController {
     const id = orBadRequest(parseProductId(raw), 'Invalid product id');
     const product = this.catalog.get(id);
     if (product === null) {
-      throw new NotFoundException({ statusCode: 404, message: 'Product not found' });
+      throw new NotFoundException({
+        statusCode: 404,
+        message: 'Product not found',
+      });
     }
     return toProductJson(product);
   }
@@ -61,13 +65,32 @@ export class ProductsController {
   }
 
   @Put(':id')
-  async update(@Param('id') rawId: string, @Body() raw: unknown): Promise<ProductJson> {
+  async update(
+    @Param('id') rawId: string,
+    @Body() raw: unknown,
+  ): Promise<ProductJson> {
     const id = orBadRequest(parseProductId(rawId), 'Invalid product id');
     const patch = orBadRequest(parseProductPatch(raw), 'Invalid product');
     const product = await this.catalog.update(id, patch);
     if (product === null) {
-      throw new NotFoundException({ statusCode: 404, message: 'Product not found' });
+      throw new NotFoundException({
+        statusCode: 404,
+        message: 'Product not found',
+      });
     }
     return toProductJson(product);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  async remove(@Param('id') raw: string): Promise<void> {
+    const id = orBadRequest(parseProductId(raw), 'Invalid product id');
+    const removed = await this.catalog.remove(id);
+    if (!removed) {
+      throw new NotFoundException({
+        statusCode: 404,
+        message: 'Product not found',
+      });
+    }
   }
 }

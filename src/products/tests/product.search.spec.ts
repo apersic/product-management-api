@@ -1,11 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { CATEGORY_SLUGS, type Category, type Product } from '../product.js';
 import { parseSeedProducts } from '../product.parse.js';
-import { buildIndex, searchIndex } from '../product.search.js';
+import { buildIndex, indexWithout, searchIndex } from '../product.search.js';
 
-const seedResult = parseSeedProducts(JSON.parse(readFileSync('seed/products.json', 'utf8')) as unknown);
+const seedResult = parseSeedProducts(
+  JSON.parse(readFileSync('seed/products.json', 'utf8')) as unknown,
+);
 if (!seedResult.ok) {
-  throw new Error(`seed/products.json failed to parse: ${seedResult.issues[0].message}`);
+  throw new Error(
+    `seed/products.json failed to parse: ${seedResult.issues[0].message}`,
+  );
 }
 const seedProducts = seedResult.value;
 const seedIndex = buildIndex(seedProducts);
@@ -30,7 +34,13 @@ function product(
 describe('searchIndex', () => {
   it('filters q over title and description, case-insensitive', () => {
     const index = buildIndex([
-      product(1, 'Essence Mascara Lash Princess', 'volumizing formula', 'beauty', 999),
+      product(
+        1,
+        'Essence Mascara Lash Princess',
+        'volumizing formula',
+        'beauty',
+        999,
+      ),
       product(2, 'Red Lipstick', 'A bold lipstick', 'beauty', 1299),
       product(3, 'Lash primer', 'Use before MASCARA', 'beauty', 499),
     ]);
@@ -71,7 +81,10 @@ describe('searchIndex', () => {
       skip: 0,
       limit: { kind: 'all' },
     });
-    expect(page.products.map((item) => item.title)).toEqual(['iPhone 13 Pro', 'Zebra stripes']);
+    expect(page.products.map((item) => item.title)).toEqual([
+      'iPhone 13 Pro',
+      'Zebra stripes',
+    ]);
   });
 
   it('paginates after skip with limit=10', () => {
@@ -81,7 +94,9 @@ describe('searchIndex', () => {
       skip: 10,
       limit: { kind: 'take', count: 10 },
     });
-    expect(page.products.map((item) => item.id)).toEqual([11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
+    expect(page.products.map((item) => item.id)).toEqual([
+      11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+    ]);
     expect(page.total).toBe(194);
     expect(page.skip).toBe(10);
   });
@@ -98,8 +113,25 @@ describe('searchIndex', () => {
       title: 'Essence Mascara Lash Princess',
     });
     for (const item of page.products) {
-      expect(`${item.title}\n${item.description}`.toLowerCase()).toContain('mascara');
+      expect(`${item.title}\n${item.description}`.toLowerCase()).toContain(
+        'mascara',
+      );
     }
+  });
+
+  it('drops a removed id from get and search', () => {
+    const next = indexWithout(seedIndex, seedProducts[0].id);
+    expect(next.byId.get(seedProducts[0].id)).toBeUndefined();
+    const page = searchIndex(next, {
+      text: null,
+      sort: { field: 'id', order: 'asc' },
+      skip: 0,
+      limit: { kind: 'take', count: 30 },
+    });
+    expect(page.total).toBe(seedProducts.length - 1);
+    expect(page.products.some((item) => item.id === seedProducts[0].id)).toBe(
+      false,
+    );
   });
 
   it('accepts every seed category as a closed slug', () => {
