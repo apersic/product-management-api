@@ -1,4 +1,10 @@
-import type { Product, ProductId, SearchPage, SearchQuery, Sort } from './product.js';
+import type {
+  Product,
+  ProductId,
+  SearchPage,
+  SearchQuery,
+  Sort,
+} from './product.js';
 
 type IndexEntry = {
   readonly product: Product;
@@ -29,7 +35,16 @@ export function indexWith(index: CatalogIndex, product: Product): CatalogIndex {
   return buildIndex(byId.values());
 }
 
-export function searchIndex(index: CatalogIndex, query: SearchQuery): SearchPage {
+export function indexWithout(index: CatalogIndex, id: ProductId): CatalogIndex {
+  const byId = new Map(index.byId);
+  byId.delete(id);
+  return buildIndex(byId.values());
+}
+
+export function searchIndex(
+  index: CatalogIndex,
+  query: SearchQuery,
+): SearchPage {
   const text = query.text;
   const filtered =
     text === null

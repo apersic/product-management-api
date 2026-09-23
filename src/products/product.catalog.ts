@@ -1,5 +1,17 @@
-import type { Product, ProductDraft, ProductId, ProductPatch, SearchPage, SearchQuery } from './product.js';
-import { buildIndex, indexWith, type CatalogIndex } from './product.search.js';
+import type {
+  Product,
+  ProductDraft,
+  ProductId,
+  ProductPatch,
+  SearchPage,
+  SearchQuery,
+} from './product.js';
+import {
+  buildIndex,
+  indexWith,
+  indexWithout,
+  type CatalogIndex,
+} from './product.search.js';
 import { createProductStore, type ProductStore } from './product.store.js';
 import type { PrismaClient } from '../prisma/prisma.js';
 
@@ -42,6 +54,12 @@ export class ProductCatalog {
     const product = await this.store.update(id, patch);
     if (product) this.index = indexWith(this.index, product);
     return product;
+  }
+
+  async remove(id: ProductId): Promise<boolean> {
+    const removed = await this.store.remove(id);
+    if (removed) this.index = indexWithout(this.index, id);
+    return removed;
   }
 
   async reload(): Promise<void> {

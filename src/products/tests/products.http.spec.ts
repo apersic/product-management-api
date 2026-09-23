@@ -7,7 +7,8 @@ import { AppModule } from '../../app.module.js';
 import { createPrismaClient } from '../../prisma/prisma.js';
 
 const TEST_DATABASE_URL =
-  process.env.DATABASE_URL ?? 'postgres://products:products@127.0.0.1:5432/products';
+  process.env.DATABASE_URL ??
+  'postgres://products:products@127.0.0.1:5432/products';
 
 const MASCARA = {
   id: 1,
@@ -29,11 +30,15 @@ const SUNSET_BALM = {
 
 function migrate(): boolean {
   try {
-    execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'migrate', 'deploy'], {
-      cwd: path.resolve(),
-      env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
-      stdio: 'pipe',
-    });
+    execFileSync(
+      process.execPath,
+      ['node_modules/prisma/build/index.js', 'migrate', 'deploy'],
+      {
+        cwd: path.resolve(),
+        env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
+        stdio: 'pipe',
+      },
+    );
     return true;
   } catch {
     return false;
@@ -90,7 +95,9 @@ describe.skipIf(!postgresReady)('products HTTP', () => {
   });
 
   it('paginates with limit=10 skip=10', async () => {
-    const res = await request(app.getHttpServer()).get('/products/search?limit=10&skip=10');
+    const res = await request(app.getHttpServer()).get(
+      '/products/search?limit=10&skip=10',
+    );
     expect(res.status).toBe(200);
     expect(res.body.products).toHaveLength(10);
     expect(res.body.skip).toBe(10);
@@ -99,12 +106,21 @@ describe.skipIf(!postgresReady)('products HTTP', () => {
   });
 
   it('filters q=mascara over title or description', async () => {
-    const res = await request(app.getHttpServer()).get('/products/search?q=mascara');
+    const res = await request(app.getHttpServer()).get(
+      '/products/search?q=mascara',
+    );
     expect(res.status).toBe(200);
     expect(res.body.products.length).toBeGreaterThan(0);
-    expect(res.body.products.some((item: { id: number }) => item.id === 1)).toBe(true);
-    for (const item of res.body.products as Array<{ title: string; description: string }>) {
-      expect(`${item.title} ${item.description}`.toLowerCase()).toContain('mascara');
+    expect(
+      res.body.products.some((item: { id: number }) => item.id === 1),
+    ).toBe(true);
+    for (const item of res.body.products as Array<{
+      title: string;
+      description: string;
+    }>) {
+      expect(`${item.title} ${item.description}`.toLowerCase()).toContain(
+        'mascara',
+      );
     }
   });
 
@@ -113,12 +129,15 @@ describe.skipIf(!postgresReady)('products HTTP', () => {
       '/products/search?sortBy=title&order=asc',
     );
     expect(res.status).toBe(200);
-    const titles = (res.body.products as Array<{ title: string }>).map((item) => item.title);
+    const titles = (res.body.products as Array<{ title: string }>).map(
+      (item) => item.title,
+    );
     expect(titles.length).toBe(30);
     for (let i = 1; i < titles.length; i += 1) {
-      expect(titles[i - 1].localeCompare(titles[i], 'en', { sensitivity: 'base' }) <= 0).toBe(
-        true,
-      );
+      expect(
+        titles[i - 1].localeCompare(titles[i], 'en', { sensitivity: 'base' }) <=
+          0,
+      ).toBe(true);
     }
   });
 
@@ -135,11 +154,15 @@ describe.skipIf(!postgresReady)('products HTTP', () => {
   });
 
   it('creates a product and GETs it by the new id', async () => {
-    const created = await request(app.getHttpServer()).post('/products/add').send(SUNSET_BALM);
+    const created = await request(app.getHttpServer())
+      .post('/products/add')
+      .send(SUNSET_BALM);
     expect(created.status).toBe(201);
     expect(typeof created.body.id).toBe('number');
     expect(created.body).toMatchObject(SUNSET_BALM);
-    const fetched = await request(app.getHttpServer()).get(`/products/${created.body.id}`);
+    const fetched = await request(app.getHttpServer()).get(
+      `/products/${created.body.id}`,
+    );
     expect(fetched.status).toBe(200);
     expect(fetched.body).toEqual({ ...SUNSET_BALM, id: created.body.id });
   });
@@ -163,29 +186,46 @@ describe.skipIf(!postgresReady)('products HTTP', () => {
   });
 
   it('rejects POST {} with 400 field issues', async () => {
-    const res = await request(app.getHttpServer()).post('/products/add').send({});
+    const res = await request(app.getHttpServer())
+      .post('/products/add')
+      .send({});
     expect(res.status).toBe(400);
     expect(res.body.statusCode).toBe(400);
     expect(res.body.message).toBe('Invalid product');
-    expect(res.body.issues.map((issue: { path: string }) => issue.path).sort()).toEqual([
-      'category',
-      'description',
-      'price',
-      'tags',
-      'title',
-    ]);
+    expect(
+      res.body.issues.map((issue: { path: string }) => issue.path).sort(),
+    ).toEqual(['category', 'description', 'price', 'tags', 'title']);
+  });
+
+  it('deletes a created product from get and search', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/products/add')
+      .send(SUNSET_BALM);
+    expect(created.status).toBe(201);
+    const id = created.body.id as number;
+    const removed = await request(app.getHttpServer()).delete(
+      `/products/${id}`,
+    );
+    expect(removed.status).toBe(204);
+    const fetched = await request(app.getHttpServer()).get(`/products/${id}`);
+    expect(fetched.status).toBe(404);
+    const search = await request(app.getHttpServer()).get(
+      '/products/search?q=Sunset%20Balm',
+    );
+    expect(search.status).toBe(200);
+    expect(
+      search.body.products.some((item: { id: number }) => item.id === id),
+    ).toBe(false);
   });
 
   it('rejects an unknown category with 400', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/products/add')
-      .send({
-        title: 'Nope',
-        description: 'Not a real category.',
-        category: 'not-a-real-category',
-        price: 1,
-        tags: [],
-      });
+    const res = await request(app.getHttpServer()).post('/products/add').send({
+      title: 'Nope',
+      description: 'Not a real category.',
+      category: 'not-a-real-category',
+      price: 1,
+      tags: [],
+    });
     expect(res.status).toBe(400);
     expect(res.body).toMatchObject({
       statusCode: 400,
@@ -202,13 +242,17 @@ describe.skipIf(!postgresReady)('products persistence', () => {
     let second: INestApplication | undefined;
     try {
       first = await bootApp();
-      const created = await request(first.getHttpServer()).post('/products/add').send(SUNSET_BALM);
+      const created = await request(first.getHttpServer())
+        .post('/products/add')
+        .send(SUNSET_BALM);
       expect(created.status).toBe(201);
       const id = created.body.id as number;
       await first.close();
       first = undefined;
       second = await bootApp();
-      const fetched = await request(second.getHttpServer()).get(`/products/${id}`);
+      const fetched = await request(second.getHttpServer()).get(
+        `/products/${id}`,
+      );
       expect(fetched.status).toBe(200);
       expect(fetched.body).toEqual({ ...SUNSET_BALM, id });
     } finally {

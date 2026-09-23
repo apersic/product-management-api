@@ -13,11 +13,18 @@ import {
 } from './product.js';
 import { Prisma, type PrismaClient } from '../prisma/prisma.js';
 
-const FIELD_KEYS = ['title', 'description', 'category', 'priceCents', 'tags'] as const satisfies ReadonlyArray<
-  keyof ProductFields
->;
+const FIELD_KEYS = [
+  'title',
+  'description',
+  'category',
+  'priceCents',
+  'tags',
+] as const satisfies ReadonlyArray<keyof ProductFields>;
 
-export type SeedOutcome = { readonly inserted: number; readonly present: number };
+export type SeedOutcome = {
+  readonly inserted: number;
+  readonly present: number;
+};
 
 export type ProductStore = {
   seedOnce(products: readonly Product[]): Promise<SeedOutcome>;
@@ -25,6 +32,7 @@ export type ProductStore = {
   search(query: SearchQuery): Promise<SearchPage>;
   insert(draft: ProductDraft): Promise<Product>;
   update(id: ProductId, patch: ProductPatch): Promise<Product | null>;
+  remove(id: ProductId): Promise<boolean>;
 };
 
 const rowSchema = z.object({
@@ -69,7 +77,8 @@ function toUpdateData(patch: ProductPatch): Prisma.ProductUpdateInput {
         if ('priceCents' in patch) data.priceCents = patch.priceCents;
         break;
       case 'tags':
-        if ('tags' in patch && patch.tags !== undefined) data.tags = [...patch.tags];
+        if ('tags' in patch && patch.tags !== undefined)
+          data.tags = [...patch.tags];
         break;
       default: {
         const _exhaustive: never = key;
@@ -81,7 +90,10 @@ function toUpdateData(patch: ProductPatch): Prisma.ProductUpdateInput {
 }
 
 function isMissingRow(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025';
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2025'
+  );
 }
 
 type SearchRow = {
@@ -229,6 +241,15 @@ export function createProductStore(prisma: PrismaClient): ProductStore {
         return parseProductRow(row);
       } catch (error) {
         if (isMissingRow(error)) return null;
+        throw error;
+      }
+    },
+    async remove(id) {
+      try {
+        await prisma.product.delete({ where: { id } });
+        return true;
+      } catch (error) {
+        if (isMissingRow(error)) return false;
         throw error;
       }
     },
