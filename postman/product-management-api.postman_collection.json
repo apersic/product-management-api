@@ -1,0 +1,365 @@
+{
+  "info": {
+    "_postman_id": "c3d4e5f6-a7b8-4901-c234-56789abcdef0",
+    "name": "Product Management API",
+    "description": "Search, read, create, and update products. No auth. Seeded from DummyJSON (194 products) on first empty database.\n\nImport this collection and an environment from the postman/ folder. Select the environment, then run the collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:3000"
+    },
+    {
+      "key": "createdId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ok', () => pm.expect(pm.response.json().ok).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Default 30 products",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('30 products, limit 30, skip 0', () => {",
+                  "  pm.expect(body.products).to.have.lengthOf(30);",
+                  "  pm.expect(body.limit).to.eql(30);",
+                  "  pm.expect(body.skip).to.eql(0);",
+                  "  pm.expect(body.total).to.be.at.least(30);",
+                  "});",
+                  "pm.test('product 1 is Essence Mascara when sorted by id', () => {",
+                  "  pm.expect(body.products[0].id).to.eql(1);",
+                  "  pm.expect(body.products[0].title).to.eql('Essence Mascara Lash Princess');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/products/search"
+          }
+        },
+        {
+          "name": "Paginate limit 10 skip 10",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('page of 10 starting at skip 10', () => {",
+                  "  pm.expect(body.products).to.have.lengthOf(10);",
+                  "  pm.expect(body.limit).to.eql(10);",
+                  "  pm.expect(body.skip).to.eql(10);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/products/search?limit=10&skip=10"
+          }
+        },
+        {
+          "name": "Filter q=mascara",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('every hit mentions mascara', () => {",
+                  "  pm.expect(body.products.length).to.be.above(0);",
+                  "  body.products.forEach((p) => {",
+                  "    const hay = (p.title + ' ' + p.description).toLowerCase();",
+                  "    pm.expect(hay).to.include('mascara');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/products/search?q=mascara"
+          }
+        },
+        {
+          "name": "Sort by title asc",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const titles = pm.response.json().products.map((p) => p.title);",
+                  "pm.test('titles are non-decreasing', () => {",
+                  "  for (let i = 1; i < titles.length; i += 1) {",
+                  "    pm.expect(titles[i - 1] <= titles[i]).to.eql(true);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/products/search?sortBy=title&order=asc"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get",
+      "item": [
+        {
+          "name": "GET product 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('title', () => {",
+                  "  pm.expect(pm.response.json().title).to.eql('Essence Mascara Lash Princess');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/products/1"
+          }
+        },
+        {
+          "name": "GET missing product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/products/999999"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create",
+      "item": [
+        {
+          "name": "POST add product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('returns an id and the submitted title', () => {",
+                  "  pm.expect(body.id).to.be.a('number');",
+                  "  pm.expect(body.title).to.eql('Sunset Balm');",
+                  "});",
+                  "pm.collectionVariables.set('createdId', String(body.id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Sunset Balm\",\n  \"description\": \"Tinted lip balm.\",\n  \"category\": \"beauty\",\n  \"price\": 12.5,\n  \"tags\": [\"beauty\", \"lip\"]\n}"
+            },
+            "url": "{{baseUrl}}/products/add"
+          }
+        },
+        {
+          "name": "POST empty body is 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('issues list missing fields', () => {",
+                  "  const paths = pm.response.json().issues.map((i) => i.path).sort();",
+                  "  pm.expect(paths).to.eql(['category', 'description', 'price', 'tags', 'title']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": "{{baseUrl}}/products/add"
+          }
+        },
+        {
+          "name": "POST unknown category is 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('category issue', () => {",
+                  "  pm.expect(pm.response.json().issues[0].path).to.eql('category');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Nope\",\n  \"description\": \"Not a real category.\",\n  \"category\": \"not-a-real-category\",\n  \"price\": 1,\n  \"tags\": []\n}"
+            },
+            "url": "{{baseUrl}}/products/add"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update",
+      "item": [
+        {
+          "name": "PUT merge title on product 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('title changed and price stayed 9.99', () => {",
+                  "  pm.expect(body.title).to.eql('Renamed mascara');",
+                  "  pm.expect(body.price).to.eql(9.99);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Renamed mascara\"\n}"
+            },
+            "url": "{{baseUrl}}/products/1"
+          }
+        },
+        {
+          "name": "GET created product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('title', () => {",
+                  "  pm.expect(pm.response.json().title).to.eql('Sunset Balm');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/products/{{createdId}}"
+          }
+        }
+      ]
+    }
+  ]
+}
